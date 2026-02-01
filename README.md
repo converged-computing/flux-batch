@@ -36,9 +36,20 @@ pip install -e . --break-system-packages
 
 We have a few simple examples:
 
+#### Saving Logs
+
 ```bash
 python3 ./examples/save_logs.py
 ```
+
+#### Flux Scribe Module
+
+```bash
+export FLUX_SCRIBE_DATABASE=sqlite:///flux-batch-job.db
+python3 ./examples/flux_scribe_module.py
+```
+
+#### General Test
 
 Or run the controlled example to see a batch job with prolog and epilog run and complete:
 
