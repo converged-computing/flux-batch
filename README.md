@@ -2,7 +2,7 @@
 
 > Python SDK to generate Flux batch jobs and services
 
-[![PyPI version](https://badge.fury.io/py/flux-batch.svg)](https://badge.fury.io/py/flux-batch)
+![PyPI - Version](https://img.shields.io/pypi/v/flux-batch)
 
 ![https://github.com/converged-computing/flux-batch/raw/main/img/flux-batch-small.png](https://github.com/converged-computing/flux-batch/raw/main/img/flux-batch-small.png)
 
