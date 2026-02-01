@@ -104,7 +104,7 @@ class JournalScribe:
 
 def main():
     # Retrieve DB path from environment or use a default
-    db_path = os.environ.get("FLUX_MCP_DATABASE", "sqlite:///server_state.db")
+    db_path = os.environ.get("FLUX_SCRIBE_DATABASE", "sqlite:///server_state.db")
     scribe = JournalScribe(db_path)
     scribe.run()
 

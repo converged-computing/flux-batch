@@ -24,6 +24,11 @@ class BatchAttributesV1:
     Explicitly defined arguments allowed by flux batch for V1 spec
     """
 
+    # These are added / custom to our module
+    # If logs directory defined (not None) save output there
+    # We force the user to provide something.
+    logs_dir: Optional[Union[bool, str]] = None
+
     # Resources
     nslots: Optional[int] = None  # -n
     cores_per_slot: Optional[int] = None  # -c
