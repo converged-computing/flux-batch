@@ -4,7 +4,7 @@
 
 [![PyPI version](https://badge.fury.io/py/flux-batch.svg)](https://badge.fury.io/py/flux-batch)
 
-![img/flux-batch-small.png](img/flux-batch-small.png)
+![https://github.com/converged-computing/flux-batch/raw/main/img/flux-batch-small.png](https://github.com/converged-computing/flux-batch/raw/main/img/flux-batch-small.png)
 
 ## Related Projects
 
@@ -16,6 +16,7 @@
 ## Services
 
  - **flux-scribe**: Write job events to a local sqlite database via the JournalConsumer (not added yet, written and needs testing)
+
 
 ## Usage
 
@@ -31,9 +32,15 @@ flux start
 pip install -e . --break-system-packages
 ```
 
-### Example
+### Examples
 
-Run the controlled example to see a batch job with prolog and epilog run and complete:
+We have a few simple examples:
+
+```bash
+python3 ./examples/save_logs.py
+```
+
+Or run the controlled example to see a batch job with prolog and epilog run and complete:
 
 ```bash
 python3 ./tests/test_flux_batch.py
@@ -88,7 +95,9 @@ jobspec = flux_batch.BatchJobspecV1.from_jobs(
     nodes=1,
     nslots=1,
     time_limit="10m",
-    job_name="test-batch"
+    job_name="test-batch",
+    # Add saving of logs, info, and metadata
+    logs_dir="./logs",
 )
 
 # Add a prolog and epilog
@@ -96,7 +105,7 @@ jobspec.add_prolog("echo 'Batch Wrapper Starting'")
 jobspec.add_epilog("echo 'Batch Wrapper Finished'")
 
 # Add a service (this assumes user level that exists)
-# jobspec.add_service("my-service'")
+jobspec.add_service("flux-scribe")
 
 # Preview it
 print(flux_batch.submit(handle, jobspec, dry_run=True))

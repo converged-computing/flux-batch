@@ -1,4 +1,4 @@
-__version__ = "0.0.0"
+__version__ = "0.0.1"
 AUTHOR = "Vanessa Sochat"
 AUTHOR_EMAIL = "vsoch@users.noreply.github.com"
 NAME = "flux-batch"
@@ -13,4 +13,5 @@ INSTALL_REQUIRES = (
 )
 
 TESTS_REQUIRES = (("pytest", {"min_version": "4.6.2"}),)
-INSTALL_REQUIRES_ALL = INSTALL_REQUIRES + TESTS_REQUIRES
+SCRIBE_REQUIRES = (("sqlalchemy", {"min_version": None}), ("rich", {"min_version": None}))
+INSTALL_REQUIRES_ALL = INSTALL_REQUIRES + TESTS_REQUIRES + SCRIBE_REQUIRES

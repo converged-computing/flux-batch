@@ -2,6 +2,7 @@ import shlex
 from typing import List
 
 import flux_batch.models as models
+import flux_batch.script as scripts
 
 
 class BatchJobspecV1:
@@ -119,14 +120,38 @@ class BatchJobspecV1:
         4. Add jobs/commands
         5. Stop services
         6. And epilogs
-        """
+        7. Custom scripts
 
+        Yes, it's redundant to write them as comments but I like the organization. -v
+        """
+        # hashbang
         lines = ["#!/bin/bash"]
+
+        # prologs
         lines.extend(self.prologs)
         for s in self.services:
             lines.append(f"systemctl --user start {s}")
+
+        # commands that are derived from jobs or command
         lines.extend(self.commands)
+
+        # stop services
         for s in reversed(self.services):
             lines.append(f"systemctl --user stop {s}")
+
+        # epilogs
         lines.extend(self.epilogs)
+
+        # custom user scripts
+        if self.attributes.logs_dir is not None:
+            lines.append(self.script_save_logs())
         return "\n".join(lines)
+
+    def script_save_logs(self):
+        """
+        Custom saving of logs. This is what we wrote for our peformance study!
+        """
+        script_path = scripts.get_script("save_logs.sh")
+
+        # Determine output directory (use home default if not defined)
+        return f"bash {script_path} {self.attributes.logs_dir}"

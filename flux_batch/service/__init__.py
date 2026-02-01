@@ -5,7 +5,7 @@ import sys
 from .scribe import SERVICE_TEMPLATE as scribe_template
 
 # Lookup of known services
-services = {"scribe": scribe_template}
+services = {"flux-scribe": scribe_template}
 
 
 def ensure_user_service(service_name: str):

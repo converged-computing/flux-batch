@@ -4,7 +4,7 @@ Description=Flux Scribe Journal Consumer
 After=network.target
 
 [Service]
-ExecStart={python_path} -m flux_mcp_server.scribe
+ExecStart={python_path} -m flux_batch.service.scribe
 Restart=on-failure
 
 [Install]
