@@ -38,6 +38,8 @@ class JournalScribe:
             logger.critical(f"Failed to connect to Flux: {e}")
             sys.exit(1)
 
+        logger.info(f"🍳 Handle: {self.handle.attr_get('local-uri')}")
+
         # Initialize Journal Consumer
         # This consumes the global event log for the entire instance
         self.consumer = flux.job.JournalConsumer(self.handle)
