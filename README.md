@@ -4,7 +4,7 @@
 
 [![PyPI version](https://badge.fury.io/py/flux-batch.svg)](https://badge.fury.io/py/flux-batch)
 
-![img/flux-batch-small.png](img/flux-batch-small.png)
+![https://github.com/converged-computing/flux-batch/raw/main/img/flux-batch-small.png](https://github.com/converged-computing/flux-batch/raw/main/img/flux-batch-small.png)
 
 ## Related Projects
 
