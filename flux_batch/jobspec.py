@@ -1,3 +1,4 @@
+import os
 import shlex
 from typing import List
 
@@ -19,6 +20,7 @@ class BatchJobspecV1:
         self.prologs: List[str] = []
         self.epilogs: List[str] = []
         self.services: List[str] = []
+        self.modules: List[str] = []
 
     @classmethod
     def from_command(cls, command: List[str], **kwargs):
@@ -51,6 +53,9 @@ class BatchJobspecV1:
 
     def add_epilog(self, cmd: str):
         self.epilogs.append(cmd)
+
+    def add_module(self, service_name: str):
+        self.modules.append(service_name)
 
     def get_cli_flags(self) -> List[str]:
         """
@@ -108,7 +113,24 @@ class BatchJobspecV1:
             for val in getattr(attr, field_name):
                 flags.extend([flag, str(val)])
 
+        # If we have modules, ensure they are added --conf <module>=true
+        if self.modules:
+            # Tell Flux to look in our user home for rc scripts
+            modprobe_path = os.path.expanduser("~/.flux-batch")
+            flags.extend(["--env", f"FLUX_MODPROBE_PATH_APPEND={modprobe_path}"])
+
+            # If modules are used, we need to pass the service names into the Flux config
+            # so the @task 'needs_config' filter allows them to run
+            for mod in self.modules:
+                flags.extend(["--conf", f"{mod}=true"])
+
         return flags
+
+    def render(self) -> str:
+        """
+        Generate the jobspec.
+        """
+        return self.generate_wrapper_script()
 
     def generate_wrapper_script(self) -> str:
         """
