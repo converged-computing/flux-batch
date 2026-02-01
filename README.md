@@ -101,7 +101,7 @@ batch.add_job(["sleep", "5"])
 batch.add_job(["echo", "Job 2 finished"])
 
 # Wrap it up into a jobspec
-jobspec = flux_batch.BatchJobspecV1.from_jobs(
+spec = flux_batch.BatchJobspecV1.from_jobs(
     batch,
     nodes=1,
     nslots=1,
@@ -112,14 +112,15 @@ jobspec = flux_batch.BatchJobspecV1.from_jobs(
 )
 
 # Add a prolog and epilog
-jobspec.add_prolog("echo 'Batch Wrapper Starting'")
-jobspec.add_epilog("echo 'Batch Wrapper Finished'")
+spec.add_prolog("echo 'Batch Wrapper Starting'")
+spec.add_epilog("echo 'Batch Wrapper Finished'")
 
 # Add a service (this assumes user level that exists)
-jobspec.add_service("flux-scribe")
+spec.add_service("flux-scribe")
 
-# Preview it
-print(flux_batch.submit(handle, jobspec, dry_run=True))
+# Preview it (batch wrapper), or generate the jobspec (json)
+print(flux_batch.submit(handle, spec, dry_run=True))
+jobspec = flux_batch.jobspec(spec)
 
 # Submit that bad boi.
 jobid = flux_batch.submit(handle, jobspec)

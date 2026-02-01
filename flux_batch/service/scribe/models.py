@@ -90,5 +90,9 @@ class EventModel(Base):
         Helper to convert ORM model to public DTO
         """
         return EventRecord(
-            timestamp=self.timestamp, event_type=self.event_type, payload=self.payload
+            timestamp=self.timestamp,
+            event_type=self.event_type,
+            payload=self.payload,
+            cluster=self.cluster,
+            job_id=self.job_id,
         )

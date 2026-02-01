@@ -18,6 +18,7 @@ def _record_event_internal(session, cluster: str, event: Dict[str, Any]):
     data = event.get("payload", {})
     timestamp = event.get("timestamp", time.time())
 
+    # Add the new event with all metadata
     new_event = EventModel(
         job_id=job_id,
         cluster=cluster,
