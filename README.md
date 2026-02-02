@@ -13,6 +13,8 @@
 - [fractale-mcp](https://github.com/compspec/fractale-mcp): (fractale) MCP orchestration (agents, databases, ui interfaces).
 - [hpc-mcp](https://github.com/converged-computing/hpc-mcp): HPC tools for a larger set of HPC and converged computing use cases.
 
+If you are looking for `flux batch` please see the documentation [here](https://flux-framework.readthedocs.io/projects/flux-core/en/latest/man1/flux-batch.html). This library supports Flux Framework and is experimental.
+
 ## Services
 
  - **flux-scribe**: Write job events to a local sqlite database via the JournalConsumer (not added yet, written and needs testing)
