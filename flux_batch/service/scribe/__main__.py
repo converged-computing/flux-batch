@@ -26,9 +26,12 @@ class JournalScribe:
         """
         Initializes the Scribe with a synchronous DB backend and a Flux Journal Consumer.
         """
+        # Get settings from environment
+        self.init_settings()
+
         # Setup Database
         logger.info(f"Connecting to Database: {db_url}")
-        self.db = SQLAlchemyBackend(db_url)
+        self.db = SQLAlchemyBackend(db_url, self.settings["use_ssl"])
         self.db.initialize()
 
         try:
@@ -44,6 +47,15 @@ class JournalScribe:
         # This consumes the global event log for the entire instance
         self.consumer = flux.job.JournalConsumer(self.handle)
         self.running = True
+
+    def init_settings(self):
+        """
+        Initialize settings.
+        """
+        self.settings = {
+            "use_ssl": os.environ.get("FLUX_SCRIBE_SSL") not in [None, "no", "false", "off"],
+            "uid": os.environ.get("FLUX_SCRIBE_UID"),
+        }
 
     def _normalize_event(self, event) -> dict:
         """
@@ -81,7 +93,7 @@ class JournalScribe:
                         # We only care about events associated with a job
                         if hasattr(event, "jobid"):
                             clean_event = self._normalize_event(event)
-                            self.db.record_event("local", clean_event)
+                            self.db.record_event("local", self.settings['uid'], clean_event)
                     else:
                         # If no event, yield a tiny bit of CPU
                         time.sleep(0.01)

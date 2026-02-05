@@ -8,7 +8,7 @@ from sqlalchemy.orm import sessionmaker
 from flux_batch.service.scribe.models import Base, EventModel, EventRecord, JobModel, JobRecord
 
 
-def _record_event_internal(session, cluster: str, event: Dict[str, Any]):
+def _record_event_internal(session, cluster: str, uid: str, event: Dict[str, Any]):
     """
     Shared synchronous logic for recording events.
     Used by both Sync and Async backends.
@@ -24,6 +24,7 @@ def _record_event_internal(session, cluster: str, event: Dict[str, Any]):
         cluster=cluster,
         timestamp=timestamp,
         event_type=event_type,
+        uid=uid,
         payload=data,
     )
     session.add(new_event)
@@ -41,6 +42,7 @@ def _record_event_internal(session, cluster: str, event: Dict[str, Any]):
                 workdir=data.get("cwd", ""),
                 submit_time=timestamp,
                 last_updated=timestamp,
+                uid=uid,
             )
             session.add(job)
         else:
@@ -64,8 +66,18 @@ class AsyncSQLAlchemyBackend:
     Asynchronous backend for the MCP Gateway.
     """
 
-    def __init__(self, db_url: str):
-        self.engine = create_async_engine(db_url, echo=False)
+    def __init__(self, db_url: str, use_ssl: bool = False):
+        # Use asyncio connection via asyncmy
+        if db_url.startswith("mysql://") or db_url.startswith("mariadb://"):
+            db_url = db_url.replace("mysql://", "mysql+asyncmy://", 1)
+            db_url = db_url.replace("mariadb://", "mysql+asyncmy://", 1)
+
+        connect_args = {"connect_timeout": 10}
+        if use_ssl:
+            print("SSL is enabled.")
+            connect_args["ssl"] = {"ssl_mode": "REQUIRED", "check_hostname": False}
+
+        self.engine = create_async_engine(db_url, echo=False, connect_args=connect_args)
         self.SessionLocal = async_sessionmaker(self.engine, expire_on_commit=False)
 
     async def initialize(self):
@@ -116,10 +128,13 @@ class SQLAlchemyBackend:
     Synchronous backend for the standalone Scribe daemon.
     """
 
-    def __init__(self, db_url: str):
-        # strip 'aiosqlite+' or similar if passed from shared config
-        url = db_url.replace("+aiosqlite", "").replace("+asyncpg", "")
-        self.engine = create_engine(url, echo=False)
+    def __init__(self, db_url: str, use_ssl: bool = False):
+        connect_args = {"connect_timeout": 10}
+        if use_ssl:
+            print("SSL is enabled.")
+            connect_args["ssl"] = {"ssl_mode": "REQUIRED", "check_hostname": False}
+
+        self.engine = create_engine(db_url, echo=False, connect_args=connect_args)
         self.SessionLocal = sessionmaker(bind=self.engine, expire_on_commit=False)
 
     def initialize(self):
@@ -128,10 +143,10 @@ class SQLAlchemyBackend:
     def close(self):
         self.engine.dispose()
 
-    def record_event(self, cluster: str, event: Dict[str, Any]):
+    def record_event(self, cluster: str, uid: str, event: Dict[str, Any]):
         with self.SessionLocal() as session:
             with session.begin():
-                _record_event_internal(session, cluster, event)
+                _record_event_internal(session, cluster, uid, event)
 
     def get_unwatched_job_ids(self, cluster: str) -> List[int]:
         """Specific for Scribe: find jobs that need a watcher."""
