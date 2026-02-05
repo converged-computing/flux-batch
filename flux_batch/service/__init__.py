@@ -3,6 +3,7 @@ import subprocess
 import sys
 
 import flux_batch.service.scribe as scribe
+import flux_batch.service.usernetes as usernetes
 
 # Lookup of known services
 services = {"flux-scribe": scribe.SERVICE_TEMPLATE}
@@ -11,6 +12,11 @@ modules = {
         "startup": scribe.START_MODULE_TEMPLATE,
         "shutdown": scribe.STOP_MODULE_TEMPLATE,
         "module": scribe.MODULE_NAME,
+    }
+    "usernetes": {
+        "startup": usernetes.START_MODULE_TEMPLATE,
+        "shutdown": usernetes.STOP_MODULE_TEMPLATE,
+        "module": usernetes.MODULE_NAME,
     }
 }
 
