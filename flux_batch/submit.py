@@ -15,12 +15,14 @@ import flux_batch.utils as utils
 def setup(spec):
     """
     shared function to generate services / modules from a spec.
+
+    Generally, a service should not also be started as a module, but this
+    is up to specific use cases and the user (and we do not control or prevent it)
     """
-    # Provision services (like flux-scribe) if requested
-    for service in spec.services:
-        services.ensure_user_service(service)
-    for module in spec.modules:
-        services.ensure_modprobe_scripts(module)
+    # Provision a la-carte services (not managed by flux if requested AND
+    # modules (that may have services) like flux-scribe, usernetes
+    for service in set(spec.services + spec.modules):
+        service.setup()
 
 
 def generate_jobspec(spec, script, wrapper_path):

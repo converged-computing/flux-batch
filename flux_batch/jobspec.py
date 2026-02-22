@@ -4,6 +4,7 @@ from typing import List
 
 import flux_batch.models as models
 import flux_batch.script as scripts
+import flux_batch.service as services
 
 
 class BatchJobspecV1:
@@ -45,8 +46,12 @@ class BatchJobspecV1:
             inst.commands = batch.jobs
         return inst
 
-    def add_service(self, service: str):
-        self.services.append(service)
+    def add_service(self, name: str):
+        """
+        Add a service by name. Services can be started one off (a la-carte) separate
+        from any kind of proper flux module.
+        """
+        self.services.append(services.new_service(name, attributes=self.attributes))
 
     def add_prolog(self, cmd: str):
         self.prologs.append(cmd)
@@ -54,8 +59,12 @@ class BatchJobspecV1:
     def add_epilog(self, cmd: str):
         self.epilogs.append(cmd)
 
-    def add_module(self, service_name: str):
-        self.modules.append(service_name)
+    def add_module(self, name: str):
+        """
+        A module typically has a service name. E.g., flux-scribe is added as a module,
+        and the module starts a service.
+        """
+        self.modules.append(services.new_service(name, attributes=self.attributes))
 
     def get_cli_flags(self) -> List[str]:
         """
@@ -122,7 +131,7 @@ class BatchJobspecV1:
             # If modules are used, we need to pass the service names into the Flux config
             # so the @task 'needs_config' filter allows them to run
             for mod in self.modules:
-                flags.extend(["--conf", f"{mod}=true"])
+                flags.extend(["--conf", f"{mod.name}=true"])
 
         return flags
 
@@ -152,14 +161,14 @@ class BatchJobspecV1:
         # prologs
         lines.extend(self.prologs)
         for s in self.services:
-            lines.append(f"systemctl --user start {s}")
+            lines += s.generate_start()
 
         # commands that are derived from jobs or command
         lines.extend(self.commands)
 
         # stop services
         for s in reversed(self.services):
-            lines.append(f"systemctl --user stop {s}")
+            lines += s.generate_stop()
 
         # epilogs
         lines.extend(self.epilogs)
@@ -171,7 +180,7 @@ class BatchJobspecV1:
 
     def script_save_logs(self):
         """
-        Custom saving of logs. This is what we wrote for our peformance study!
+        Custom saving of logs. This is what we wrote for our performance study.
         """
         script_path = scripts.get_script("save_logs.sh")
 

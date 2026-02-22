@@ -10,6 +10,7 @@ LICENSE = "LICENSE"
 INSTALL_REQUIRES = (
     ("pyyaml", {"min_version": None}),
     ("ply", {"min_version": None}),
+    ("Jinja2", {"min_version": None}),
 )
 
 TESTS_REQUIRES = (("pytest", {"min_version": "4.6.2"}),)
