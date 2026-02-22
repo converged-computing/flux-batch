@@ -28,6 +28,8 @@ class BatchAttributesV1:
     # If logs directory defined (not None) save output there
     # We force the user to provide something.
     logs_dir: Optional[Union[bool, str]] = None
+    # Rootless container technology for usernetes
+    container_tech: Optional[str] = None
 
     # Resources
     nslots: Optional[int] = None  # -n

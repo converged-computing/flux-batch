@@ -10,7 +10,7 @@ ENV USERNAME=${USERNAME}
 ENV USER_UID=${USER_UID}
 ENV USER_GID=${USER_GID}
 USER root
-RUN apt-get update && apt-get install -y less python3-pip
+RUN apt-get update && apt-get install -y less python3-pip openssh-client xorg
 
 # Add the group and user that match our ids
 RUN groupadd -g ${USER_GID} ${USERNAME} && \
@@ -22,3 +22,9 @@ RUN python3 -m pip install Cython IPython setuptools rich --break-system-package
 ENV PATH=/home/vscode/.local/bin:$PATH
 ENV PYTHONPATH="/usr/lib/flux/python3.12/"
 USER $USERNAME
+
+# mock systemd?
+RUN git clone https://github.com/gdraheim/docker-systemctl-replacement /tmp/systemctl && \
+    cd /tmp/systemctl && \
+    sudo cp files/docker/systemctl3.py /usr/bin/systemctl && \
+    sudo chmod +x /usr/bin/systemctl

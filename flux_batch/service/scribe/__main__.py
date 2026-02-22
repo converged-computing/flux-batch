@@ -93,7 +93,7 @@ class JournalScribe:
                         # We only care about events associated with a job
                         if hasattr(event, "jobid"):
                             clean_event = self._normalize_event(event)
-                            self.db.record_event("local", self.settings['uid'], clean_event)
+                            self.db.record_event("local", self.settings["uid"], clean_event)
                     else:
                         # If no event, yield a tiny bit of CPU
                         time.sleep(0.01)
