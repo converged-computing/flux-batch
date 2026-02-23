@@ -8,6 +8,36 @@ from sqlalchemy.orm import sessionmaker
 from flux_batch.service.scribe.models import Base, EventModel, EventRecord, JobModel, JobRecord
 
 
+def get_db(db_uri, use_ssl=False):
+    """
+    Initialize and return the database
+    """
+    databases = {
+        "sqlite": SqliteBackend,
+        "mariadb": SQLBackend,
+        "mysql": SQLBackend,
+        "postgres": PostgresBackend,
+    }
+    async_databases = {
+        "sqlite": AsyncSqliteBackend,
+        "mariadb": AsyncSQLBackend,
+        "mysql": AsyncSQLBackend,
+        "postgres": AsyncPostgresBackend,
+    }
+    # Check async first
+    for uri, backend in async_databases.items():
+        if "async" in db_uri and db_uri.startswith(uri):
+            db = backend(db_uri, use_ssl)
+            return db
+
+    # Now regular
+    for uri, backend in databases.items():
+        if db_uri.startswith(uri):
+            db = backend(db_uri, use_ssl)
+            return db
+    raise ValueError(f"Database URI {db_uri} is not known.")
+
+
 def _record_event_internal(session, cluster: str, uid: str, event: Dict[str, Any]):
     """
     Shared synchronous logic for recording events.
@@ -61,24 +91,10 @@ def _record_event_internal(session, cluster: str, uid: str, event: Dict[str, Any
                 job.exit_code = data["status"]
 
 
-class AsyncSQLAlchemyBackend:
+class AsyncBackend:
     """
     Asynchronous backend for the MCP Gateway.
     """
-
-    def __init__(self, db_url: str, use_ssl: bool = False):
-        # Use asyncio connection via asyncmy
-        if db_url.startswith("mysql://") or db_url.startswith("mariadb://"):
-            db_url = db_url.replace("mysql://", "mysql+asyncmy://", 1)
-            db_url = db_url.replace("mariadb://", "mysql+asyncmy://", 1)
-
-        connect_args = {"connect_timeout": 10}
-        if use_ssl:
-            print("SSL is enabled.")
-            connect_args["ssl"] = {"ssl_mode": "REQUIRED", "check_hostname": False}
-
-        self.engine = create_async_engine(db_url, echo=False, connect_args=connect_args)
-        self.SessionLocal = async_sessionmaker(self.engine, expire_on_commit=False)
 
     async def initialize(self):
         async with self.engine.begin() as conn:
@@ -123,19 +139,56 @@ class AsyncSQLAlchemyBackend:
             return [j.to_record() for j in result.scalars().all()]
 
 
-class SQLAlchemyBackend:
+class AsyncSQLBackend(AsyncBackend):
     """
-    Synchronous backend for the standalone Scribe daemon.
+    Asynchronous SQL backend for the MCP Gateway.
     """
 
     def __init__(self, db_url: str, use_ssl: bool = False):
+        db_url = db_url.replace("mysql://", "mysql+asyncmy://", 1)
+        db_url = db_url.replace("mariadb://", "mysql+asyncmy://", 1)
         connect_args = {"connect_timeout": 10}
+
         if use_ssl:
             print("SSL is enabled.")
             connect_args["ssl"] = {"ssl_mode": "REQUIRED", "check_hostname": False}
 
-        self.engine = create_engine(db_url, echo=False, connect_args=connect_args)
-        self.SessionLocal = sessionmaker(bind=self.engine, expire_on_commit=False)
+        self.engine = create_async_engine(db_url, echo=False, connect_args=connect_args)
+        self.SessionLocal = async_sessionmaker(self.engine, expire_on_commit=False)
+
+
+class AsyncSqliteBackend(AsyncBackend):
+    """
+    Asynchronous sqlite backend for the MCP Gateway.
+    """
+
+    def __init__(self, db_url: str, use_ssl: bool = False):
+        connect_args = {"timeout": 10}
+        self.engine = create_async_engine(db_url, echo=False, connect_args=connect_args)
+        self.SessionLocal = async_sessionmaker(self.engine, expire_on_commit=False)
+
+
+class AsyncPostgresBackend(AsyncBackend):
+    """
+    Asynchronous sqlite backend for the MCP Gateway.
+    """
+
+    def __init__(self, db_url: str, use_ssl: bool = False):
+        connect_args = {"timeout": 10}
+        if use_ssl:
+            print("SSL is enabled.")
+            connect_args["ssl"] = True
+        self.engine = create_async_engine(db_url, echo=False, connect_args=connect_args)
+        self.SessionLocal = async_sessionmaker(self.engine, expire_on_commit=False)
+
+
+# Sync (regular) backends
+
+
+class SyncBackend:
+    """
+    Synchronous backend for the standalone Scribe daemon.
+    """
 
     def initialize(self):
         Base.metadata.create_all(self.engine)
@@ -164,3 +217,46 @@ class SQLAlchemyBackend:
                     .where(and_(JobModel.job_id == job_id, JobModel.cluster == cluster))
                     .values(state="watching")
                 )
+
+
+class SQLBackend(SyncBackend):
+    """
+    Asynchronous SQL backend for the MCP Gateway.
+    """
+
+    def __init__(self, db_url: str, use_ssl: bool = False):
+        db_url = db_url.replace("mysql://", "mysql+asyncmy://", 1)
+        db_url = db_url.replace("mariadb://", "mysql+asyncmy://", 1)
+        connect_args = {"connect_timeout": 10}
+
+        if use_ssl:
+            print("SSL is enabled.")
+            connect_args["ssl"] = {"ssl_mode": "REQUIRED", "check_hostname": False}
+
+        self.engine = create_engine(db_url, echo=False, connect_args=connect_args)
+        self.SessionLocal = sessionmaker(bind=self.engine, expire_on_commit=False)
+
+
+class SqliteBackend(SyncBackend):
+    """
+    Asynchronous sqlite backend for the MCP Gateway.
+    """
+
+    def __init__(self, db_url: str, use_ssl: bool = False):
+        connect_args = {"timeout": 10}
+        self.engine = create_engine(db_url, echo=False, connect_args=connect_args)
+        self.SessionLocal = sessionmaker(bind=self.engine, expire_on_commit=False)
+
+
+class PostgresBackend(SyncBackend):
+    """
+    Asynchronous sqlite backend for the MCP Gateway.
+    """
+
+    def __init__(self, db_url: str, use_ssl: bool = False):
+        connect_args = {"timeout": 10}
+        if use_ssl:
+            print("SSL is enabled.")
+            connect_args["ssl"] = True
+        self.engine = create_engine(db_url, echo=False, connect_args=connect_args)
+        self.SessionLocal = sessionmaker(bind=self.engine, expire_on_commit=False)

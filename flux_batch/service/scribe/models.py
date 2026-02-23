@@ -86,7 +86,7 @@ class EventModel(Base):
     __tablename__ = "events"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    job_id: Mapped[str] = mapped_column(String(255), primary_key=True)
+    job_id: Mapped[str] = mapped_column(String(255), index=True)
     cluster: Mapped[str] = mapped_column(String(255), index=True)
     timestamp: Mapped[float] = mapped_column(Float)
     event_type: Mapped[str] = mapped_column(String(50))
