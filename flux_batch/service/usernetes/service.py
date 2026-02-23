@@ -100,7 +100,6 @@ def stop_{{service_func}}(context):
     except:
         pass
 
-        @task(
 @task(
     "stop-{{service_name}}-worker",
     ranks=">0",

@@ -12,7 +12,7 @@ import flux.job
 from rich import print
 
 # Use the synchronous version of the backend to avoid asyncio-in-thread conflicts
-from flux_batch.service.scribe.database import SQLAlchemyBackend
+import flux_batch.service.scribe.database as databases
 
 # Setup logging to stderr (to avoid polluting stdout if run manually)
 logging.basicConfig(
@@ -31,7 +31,7 @@ class JournalScribe:
 
         # Setup Database
         logger.info(f"Connecting to Database: {db_url}")
-        self.db = SQLAlchemyBackend(db_url, self.settings["use_ssl"])
+        self.db = databases.get_db(db_url, self.settings["use_ssl"])
         self.db.initialize()
 
         try:
