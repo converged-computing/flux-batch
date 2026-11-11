@@ -36,7 +36,7 @@ class BatchAttributesV1:
     cores_per_slot: Optional[int] = None  # -c
     gpus_per_slot: Optional[int] = None  # -g
     nodes: Optional[int] = None  # -N
-    exclusive: bool = False  # -x
+    exclusive: bool = False  # --exclusive
 
     # Basic Options
     bank: Optional[str] = None  # -B

@@ -46,12 +46,15 @@ class BatchJobspecV1:
             inst.commands = batch.jobs
         return inst
 
-    def add_service(self, name: str):
+    def add_service(self, name: str, **kwargs):
         """
         Add a service by name. Services can be started one off (a la-carte) separate
-        from any kind of proper flux module.
+        from any kind of proper flux module. Keyword arguments become service
+        attributes, on top of the batch attributes.
         """
-        self.services.append(services.new_service(name, attributes=self.attributes))
+        service = services.new_service(name, attributes=self.attributes, **kwargs)
+        self.services.append(service)
+        return service
 
     def add_prolog(self, cmd: str):
         self.prologs.append(cmd)
@@ -59,12 +62,26 @@ class BatchJobspecV1:
     def add_epilog(self, cmd: str):
         self.epilogs.append(cmd)
 
-    def add_module(self, name: str):
+    def add_module(self, name: str, **kwargs):
         """
         A module typically has a service name. E.g., flux-scribe is added as a module,
-        and the module starts a service.
+        and the module starts a service. Keyword arguments become service attributes,
+        e.g. add_module("usernetes", mode="worker", cluster_name="lammps").
         """
-        self.modules.append(services.new_service(name, attributes=self.attributes))
+        module = services.new_service(name, attributes=self.attributes, **kwargs)
+        self.modules.append(module)
+        return module
+
+    @property
+    def modprobe_dir(self):
+        """
+        Directory for the rendered modprobe rc scripts, passed to Flux via
+        FLUX_MODPROBE_PATH_APPEND. Scoped by job name so concurrent jobs with
+        different module configurations (a cluster and a burst of workers,
+        say) do not overwrite each other's scripts.
+        """
+        slug = self.attributes.job_name or "default"
+        return os.path.expanduser(f"~/.flux-batch/{slug}")
 
     def get_cli_flags(self) -> List[str]:
         """
@@ -100,8 +117,8 @@ class BatchJobspecV1:
                 flags.extend([flag, str(val)])
 
         # Boolean flags
-        if attr.exclusive:
-            flags.append("-x")
+        if attr.exclusive or any(m.exclusive_nodes for m in self.modules):
+            flags.append("--exclusive")
         if attr.unbuffered:
             flags.append("-u")
         if attr.wrap:
@@ -124,9 +141,8 @@ class BatchJobspecV1:
 
         # If we have modules, ensure they are added --conf <module>=true
         if self.modules:
-            # Tell Flux to look in our user home for rc scripts
-            modprobe_path = os.path.expanduser("~/.flux-batch")
-            flags.extend(["--env", f"FLUX_MODPROBE_PATH_APPEND={modprobe_path}"])
+            # Tell Flux to look in this spec's directory for rc scripts
+            flags.extend(["--env", f"FLUX_MODPROBE_PATH_APPEND={self.modprobe_dir}"])
 
             # If modules are used, we need to pass the service names into the Flux config
             # so the @task 'needs_config' filter allows them to run
@@ -161,14 +177,22 @@ class BatchJobspecV1:
         # prologs
         lines.extend(self.prologs)
         for s in self.services:
-            lines += s.generate_start()
+            lines.extend(s.generate_start())
+
+        # modules can gate the workload (e.g., wait for the cluster to be ready)
+        for m in self.modules:
+            lines.extend(m.generate_batch_prolog())
 
         # commands that are derived from jobs or command
         lines.extend(self.commands)
 
+        # module epilogs
+        for m in reversed(self.modules):
+            lines.extend(m.generate_batch_epilog())
+
         # stop services
         for s in reversed(self.services):
-            lines += s.generate_stop()
+            lines.extend(s.generate_stop())
 
         # epilogs
         lines.extend(self.epilogs)
