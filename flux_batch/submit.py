@@ -20,9 +20,10 @@ def setup(spec):
     is up to specific use cases and the user (and we do not control or prevent it)
     """
     # Provision a la-carte services (not managed by flux if requested AND
-    # modules (that may have services) like flux-scribe, usernetes
+    # modules (that may have services) like flux-scribe, usernetes.
+    # Modprobe scripts go in the spec's own directory (FLUX_MODPROBE_PATH_APPEND).
     for service in set(spec.services + spec.modules):
-        service.setup()
+        service.setup(base_dir=spec.modprobe_dir)
 
 
 def generate_jobspec(spec, script, wrapper_path):

@@ -3,167 +3,40 @@
 > Python SDK to generate Flux batch jobs and services
 
 ![PyPI - Version](https://img.shields.io/pypi/v/flux-batch)
+[![docs](https://github.com/converged-computing/flux-batch/actions/workflows/docs.yaml/badge.svg)](https://converged-computing.github.io/flux-batch/)
 
 ![https://github.com/converged-computing/flux-batch/raw/main/img/flux-batch-small.png](https://github.com/converged-computing/flux-batch/raw/main/img/flux-batch-small.png)
 
-## Related Projects
+flux-batch builds Flux batch jobs from a list of commands, wraps them with
+prologs, epilogs and services, and submits them. Modules deploy something
+across every node of the job before your work runs, such as a user space
+Kubernetes cluster with [usernetes](https://converged-computing.github.io/flux-batch/modules/usernetes.html).
 
-- [flux-mcp](https://github.com/converged-computing/flux-mcp): MCP functions for Flux.
-- [flux-mcp-server](https://github.com/converged-computing/flux-mcp-server): MCP server.
-- [fractale-mcp](https://github.com/compspec/fractale-mcp): (fractale) MCP orchestration (agents, databases, ui interfaces).
-- [hpc-mcp](https://github.com/converged-computing/hpc-mcp): HPC tools for a larger set of HPC and converged computing use cases.
+📖 **Documentation: https://converged-computing.github.io/flux-batch/**
 
-If you are looking for `flux batch` please see the documentation [here](https://flux-framework.readthedocs.io/projects/flux-core/en/latest/man1/flux-batch.html). This library supports Flux Framework and is experimental.
+## Quick start
 
-## Services
-
- - **flux-scribe**: Write job events to a local sqlite database via the JournalConsumer (not added yet, written and needs testing)
-
-
-## Usage
-
-This is a small Flux utility that makes it easy to create Flux batch jobs and services.
-The use case is to submit work (one or more jobs) under an instance, and run a custom service, or epilog and prolog commands. We will provision several services here, and you can also provide your own name to start / stop.
-
-### Setup
-
-Install the library and start (or be in) a flux instance.
+Inside a Flux instance (`flux start`, or an allocation with `FLUX_URI` set; see the
+[installation docs](https://converged-computing.github.io/flux-batch/getting-started/install.html)):
 
 ```bash
-flux start
-pip install -e . --break-system-packages
+flux python -m pip install --user -e .
+flux python my_script.py
 ```
-
-### Examples
-
-We have a few simple examples:
-
-#### Saving Logs
-
-```bash
-python3 ./examples/save_logs.py
-```
-
-#### Usernetes
-
-Here is an example to deploy the usernetes module.
-
-```bash
-# Create a Flux allocation
-flux alloc -N2 --time 4h
-
-# Ensure Flux Python bindings on path (e.g., import flux, flux.Flux() works)
-export PYTHONPATH=/usr/lib64/python3.12/site-packages
-
-# Ensure you have the code here!
-git clone https://github.com/converged-computing/flux-batch
-cd flux-batch
-pip install -e .
-
-# Run the example
-python examples/usernetes_module.py
-
-# The module files are written here. If you need them recreated, delete again.
-ls ~/.flux-batch
-
-# Join commands are here. We will need to get the flux job id instead of this uuid
-ls ~/.usernetes/join-commands
-
-# Look in /tmp/control-plane.log and /tmp/worker.log for logs
-# Look in /tmp/<username>/usernetes for usernetes!
-# . source_env.sh then use kubectl
-```
-
-#### Flux Scribe Module
-
-```bash
-export FLUX_SCRIBE_DATABASE=sqlite:///flux-batch-job.db
-python3 ./examples/flux_scribe_module.py
-```
-
-#### General Test
-
-Or run the controlled example to see a batch job with prolog and epilog run and complete:
-
-```bash
-python3 ./tests/test_flux_batch.py
-```
-```console
-Flux Batch Module Test
-[OK] Connected to Flux.
-[*] Creating batch jobs...
-[*] Mapping attributes to BatchJobspecV1...
-[*] Previewing submission (Dryrun -> Wrapper)...
-#!/bin/bash
-echo 'Batch Wrapper Starting'
-flux submit --wait /bin/echo 'Job 1 starting'
-flux submit --wait /bin/sleep 5
-flux submit --wait /bin/echo 'Job 2 finished'
-flux job wait --all
-echo 'Batch Wrapper Finished'
-[*] Performing submission (Dryrun -> Wrapper -> Submit)...
-[SUCCESS] Batch submitted! Flux Job ID: ƒMX29AwFu
-```
-```bash
-$ flux jobs -a
-       JOBID USER     NAME       ST NTASKS NNODES     TIME INFO
-   ƒMX29AwFu vscode   test-batch  R      1      1   4.213s 68e8c4399c15
-```
-```bash
-$ flux jobs -a
-       JOBID USER     NAME       ST NTASKS NNODES     TIME INFO
-   ƒMX29AwFu vscode   test-batch CD      1      1   6.354s 68e8c4399c15
-```
-
-Here is an explicit (manual) example to do the same:
 
 ```python
 import flux
 import flux_batch
 
-# for pretty printing
-# from rich import print
-
-handle = flux.Flux()
-
-# Create your batch job with some number of commands
 batch = flux_batch.BatchJobV1()
-batch.add_job(["echo", "Job 1 starting"])
-batch.add_job(["sleep", "5"])
-batch.add_job(["echo", "Job 2 finished"])
+batch.add_job(["echo", "hello from flux-batch"])
 
-# Wrap it up into a jobspec
-spec = flux_batch.BatchJobspecV1.from_jobs(
-    batch,
-    nodes=1,
-    nslots=1,
-    time_limit="10m",
-    job_name="test-batch",
-    # Add saving of logs, info, and metadata
-    logs_dir="./logs",
-)
-
-# Add a prolog and epilog
-spec.add_prolog("echo 'Batch Wrapper Starting'")
-spec.add_epilog("echo 'Batch Wrapper Finished'")
-
-# Add a service (this assumes user level that exists)
-spec.add_service("flux-scribe")
-
-# Preview it (batch wrapper), or generate the jobspec (json)
-print(flux_batch.submit(handle, spec, dry_run=True))
-jobspec = flux_batch.jobspec(spec)
-
-# Submit that bad boi.
-jobid = flux_batch.submit(handle, jobspec)
+spec = flux_batch.BatchJobspecV1.from_jobs(batch, nodes=1, time_limit="10m")
+print(flux_batch.submit(flux.Flux(), spec, dry_run=True))  # preview
+jobid = flux_batch.submit(flux.Flux(), spec)
 ```
 
-See the [examples](examples) directory for more script examples.
-
-## TODO
-
-- How to control a variable number of ranks for different services ([ref](https://flux-framework.readthedocs.io/projects/flux-core/en/latest/python/autogenerated/flux.modprobe.html#flux.modprobe.task))
-- Need to add env directive to flux module start for the job id.
+See the [examples](examples) directory for more.
 
 ## License
 
