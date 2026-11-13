@@ -1,5 +1,8 @@
 # Testing
 
+All of these run in CI (`.github/workflows/test.yaml`) inside the
+`fluxrm/flux-sched:jammy` container on every pull request.
+
 ## Without Flux
 
 These run anywhere: no Flux, podman or Kubernetes needed.
@@ -9,27 +12,27 @@ These run anywhere: no Flux, podman or Kubernetes needed.
 # usernetes service scripts stubbed. Add -v to print the launcher logs.
 ./tests/test_usernetes_launchers.sh
 
+# Jobspec building: commands, the wrapper script, flux batch flags
+python3 -m pytest tests/test_jobspec.py
+
 # Template rendering for the usernetes module
 python3 -m pytest tests/test_usernetes_module.py
 ```
 
 The launcher test covers the stale join command guard, cluster bring-up,
-the readiness gate, bursting, departures, teardown and failure paths.
+the readiness gate, bursting, departures, the one-node-per-host lock,
+teardown and failure paths.
 
 ## With Flux
 
-Inside a Flux instance, this submits a small batch job with a prolog and
-epilog:
+Under a broker, these submit real batch jobs and check what ran: single
+and multi-job batches, prolog and epilog order, dry runs, failure
+reporting, and the compiled jobspec for a usernetes job (exclusive
+nodes, the module conf, the readiness gate in the wrapper). They skip
+instead of failing when there is no broker.
 
 ```bash
-flux start
-flux python ./tests/test_flux_batch.py
-```
-
-```console
-$ flux jobs -a
-       JOBID USER     NAME       ST NTASKS NNODES     TIME INFO
-   ƒMX29AwFu vscode   test-batch CD      1      1   6.354s 68e8c4399c15
+flux start python3 -m pytest tests/test_flux_batch.py
 ```
 
 ## On a cluster
