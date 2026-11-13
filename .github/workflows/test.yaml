@@ -1,0 +1,39 @@
+name: test flux-batch
+
+on:
+  pull_request: {}
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        container: ["fluxrm/flux-sched:jammy"]
+
+    container:
+      image: ${{ matrix.container }}
+      options: "--platform=linux/amd64 --user root -it --init"
+
+    name: ${{ matrix.container }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install flux-batch
+        run: |
+          apt-get update && apt-get install -y python3-pip
+          python3 -m pip install pytest
+          python3 -m pip install -e .
+
+      - name: Unit tests (no broker needed)
+        run: python3 -m pytest -v tests/test_jobspec.py tests/test_usernetes_module.py
+
+      - name: Usernetes launcher orchestration tests
+        run: bash tests/test_usernetes_launchers.sh
+
+      - name: Integration tests (under a Flux broker)
+        run: flux start python3 -m pytest -v tests/test_flux_batch.py
